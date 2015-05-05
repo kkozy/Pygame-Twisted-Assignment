@@ -4,6 +4,8 @@ import os
 import math
 import sys
 import pygame
+import random
+
 from pygame.locals import *
 from twisted.internet.protocol import Factory
 from twisted.internet.protocol import ClientFactory
@@ -82,7 +84,6 @@ class Player2(pygame.sprite.Sprite):
 		if keycode == K_DOWN and self.rect.y <= 440:
 			self.rect = self.rect.move(0, 2)
 		return
-
 class Enemy(pygame.sprite.Sprite):
 	def __init__(self, gs=None):
 		pygame.sprite.Sprite.__init__(self)
@@ -128,41 +129,55 @@ class GameSpace:
 		#4) regulate tick speed is done in the game class
 		
 		#5) handle user input events
-		for event in pygame.event.get():
-			if event.type == KEYDOWN and is_client == "host":
-				self.player1.move(event.key)
-				connections['GAME'].transport.write(str(event.key))
-			elif event.type == KEYDOWN and is_client == "client":
-				self.player2.move(event.key)
-				connections['GAME'].transport.write(str(event.key))
+		print connections['GAME']
+		if connections['GAME'] != "NULL":
+			for event in pygame.event.get():
+				if event.type == KEYDOWN and is_client == "host":
+					self.player1.move(event.key)
+					#connections['GAME'].transport.write(str(event.key))
+				elif event.type == KEYDOWN and is_client == "client":
+					self.player2.move(event.key)
+					#connections['GAME'].transport.write(str(event.key))
 
-			if event.type == pygame.QUIT:
-				reactor.stop()
-				sys.exit()
+				if event.type == pygame.QUIT:
+					reactor.stop()
+					sys.exit()
 
-		#6) ongoing behavior, send everything a tick
-		self.player1.tick()
-		self.player2.tick()
-		#7) animations
-		#player_posittions
-		self.screen.fill(self.black)
-		self.screen.blit(self.player1.image, self.player1.rect)
-		self.screen.blit(self.player2.image, self.player2.rect)
-		pygame.display.flip()
+			#6) ongoing behavior, send everything a tick
+			self.player1.tick()
+			self.player2.tick()
+			#7) animations
+			player_positions["p1_rect"] = self.player1.rect
+			player_positions["p1_image"] = self.player1.image
+			player_positions["p2_rect"] = self.player2.rect
+			player_positions["p2_image"] = self.player2.image
+			connections['GAME'].sendline(pickle.dumps(player_positions))
+			self.screen.fill(self.black)
+			self.screen.blit(self.player1.image, self.player1.rect)
+			self.screen.blit(self.player2.image, self.player2.rect)
+			pygame.display.flip()
+		else:
+			return
 
 class Game(Protocol):
 	def __init__(self, users):
 		self.users = users
+		connections['GAME'] = 'NULL'
 		
 	def connectionMade(self):
 		connections['GAME'] = self
+		#self.state = "GO"
+		print connections['GAME']
 
 	def dataReceived(self, data):
 		#print data
+		positions = pickle.loads(data)
 		if is_client == "host":
-			gs.player2.move(int(data))
+			gs.player2.rect = positions["p2_rect"]
+			gs.player2.image = positions["p2_image"]
 		else:
-			gs.player1.move(int(data))
+			gs.player1.rect = positions["p1_rect"]
+			gs.player1.image = positions["p1_image"]
 
 	def connectionLost(self,reason):
 		print "Connection lost - goodbye!"
