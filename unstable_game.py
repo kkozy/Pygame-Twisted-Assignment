@@ -20,37 +20,40 @@ import pickle
 connections = dict()
 is_client = sys.argv[1]
 player_positions = dict()
+laser_positions = dict()
+positions = dict()
 state = "WAIT"
 
 
 
-class Player1(pygame.sprite.Sprite):
+class Player1(pygame.sprite.Sprite):		#player 1 sprite
 	def __init__(self, gs=None):
 		pygame.sprite.Sprite.__init__(self)
 		self.gs = gs
-		self.image = pygame.image.load("p1.png")
-		self.image = pygame.transform.scale(self.image,(50,30))
+		self.image = pygame.image.load("p1.png")	#different image and start position than player 2
+		self.image = pygame.transform.scale(self.image,(50,30))		# resize for appropriate sprite
 		self.rect = self.image.get_rect()
 		self.orig_image = self.image	# keep original to limit resize errors
 		self.rect = self.rect.move(150, 420)
 		self.angle = 0
 
-	def tick(self):
+	def tick(self):	# on tick, each player will change their image rotation 
 		if is_client == "host":
 			#gets mouse x and y positions
-			mx, my = pygame.mouse.get_pos()
+			mx, my = pygame.mouse.get_pos()	#gets mouse position
 			px = self.rect.centerx
 			py = self.rect.centery
 			self.angle = (0) - math.degrees(math.atan2(my-py, mx-px))
 			self.image = pygame.transform.rotate(self.orig_image, self.angle)
 			self.rect = self.image.get_rect(center = (self.rect.centerx, self.rect.centery) )
+			#changes the angle, image, and rect so that we now face the mouse
 		return
 
-	def move(self):
+	def move(self):		#moves based on key input
 		keys = pygame.key.get_pressed()
-		if keys[K_RIGHT] and self.rect.x <= 600:
+		if keys[K_RIGHT] and self.rect.x <= 600:	#doesn't let user move outside of screen area
 			self.rect = self.rect.move(2, 0)
-		if keys[K_LEFT] and self.rect.x >= 0:
+		if keys[K_LEFT] and self.rect.x >= 0:		#each key has it's own detection case
 			self.rect = self.rect.move(-2, 0)
 		#if keys[K_UP] and self.rect.y >= 360:
 		#	self.rect = self.rect.move(0, -2)
@@ -58,8 +61,8 @@ class Player1(pygame.sprite.Sprite):
 		#	self.rect = self.rect.move(0, 2)
 		return
 
-class Player2(pygame.sprite.Sprite):
-	def __init__(self, gs=None):
+class Player2(pygame.sprite.Sprite):		#basically the same as player 1
+	def __init__(self, gs=None):			#different image and start position
 		pygame.sprite.Sprite.__init__(self)
 		self.gs = gs
 		self.image = pygame.image.load("p2.png")
@@ -92,60 +95,92 @@ class Player2(pygame.sprite.Sprite):
 		#	self.rect = self.rect.move(0, 2)
 		return
 
-class Enemy(pygame.sprite.Sprite):
+class Enemy(pygame.sprite.Sprite):		# this is our enemy class
 	def __init__(self, gs=None):
 		pygame.sprite.Sprite.__init__(self)
 
-		foo = ['E1.png', 'E2.png', 'E3.png']
+		foo = ['E1.png', 'E2.png', 'E3.png']	#enemy image option list
 
-		self.hit_points = 10
+		bar = ['LEFT','RIGHT']		#randomly chooses an initial movement direction
+		self.direction = str(random.choice(bar))
+
+		self.hit_points = 10			#each starts with it's own hitpoint tracker
 		self.gs = gs
-		self.image = pygame.image.load(str(random.choice(foo)))
-		self.image = pygame.transform.scale(self.image,(30,30))
+		self.image = pygame.image.load(str(random.choice(foo)))	#randomly chooses it's image from 3 options
+		self.image = pygame.transform.scale(self.image,(30,30))	#standard resize
 		self.rect = self.image.get_rect()
 		self.orig_image = self.image	# keep original to limit resize errors
-		self.rect = self.rect.move(50, 50)
+		#self.rect = self.rect.move(50, 50)
 
-	def tick(self):
-		#do this thing
+	def tick(self):	# when we tick, we move in the direction indicated by our directon var
+
+		if self.direction == "LEFT" and self.rect.x <= 5:	#this checks to make sure the enemy won't
+				self.direction = "RIGHT"					#run off the edge
+		elif self.direction == "RIGHT" and self.rect.x >= 570:		#if it's about to, we change our direction
+				self.direction = "LEFT"
+
+		if self.direction == "LEFT":		#the enemy moves in the direction indicated
+			self.rect = self.rect.move(-1, 0)
+		elif self.direction == "RIGHT":
+			self.rect = self.rect.move(1, 0)
 		return
 
-class P_Laser(pygame.sprite.Sprite):
+class P1_Laser(pygame.sprite.Sprite):		#the player 1 spawned laser object
 	def __init__(self,playx,playy,gs=None):
 
-		if is_client == "client":
-			fill_color = 255,0,0
-		else:
-			fill_color = 0,255,0
+		#client and host have different colors
+		fill_color = 0,255,0
 		pygame.sprite.Sprite.__init__(self)
-		self.image = pygame.Surface([5,5])
+		self.image = pygame.Surface([5,5])		#laser is just a small box
 		self.image.fill(fill_color)
 		self.rect = self.image.get_rect()
 		 
-		mx, my = pygame.mouse.get_pos()
-		px = playx#self.rect.centerx
-		py = playy#self.rect.centery
+		mx, my = pygame.mouse.get_pos()	#gets the mouse position
 
-		mag = math.sqrt((mx-px)**(2) + (my-py)**(2))
-		self.x_direction = 20*(mx-px)/mag
-		self.y_direction = 20*(my-py)/mag
+		mag = math.sqrt((mx-playx)**(2) + (my-playy)**(2))	#normalizes the magnitude of the lasers vector
+		self.x_direction = 20*(mx-playx)/mag				#Defines the rate of x change
+		self.y_direction = 20*(my-playy)/mag				#defines the rate of y change
 
 	def tick(self):
+		#every tick, the player laser will move in the defined direcitons without change
 		self.rect = self.rect.move(self.x_direction, self.y_direction)
 		return
 
-class E_Laser(pygame.sprite.Sprite):
-	def __init__(self, gs=None):
+class P2_Laser(pygame.sprite.Sprite):		#the player 2 spawned laser object
+	def __init__(self,playx,playy,gs=None):
 
-		fill_color = 0,255,0
+		#client and host have different colors
+		fill_color = 255,0,0
 		pygame.sprite.Sprite.__init__(self)
-		self.image = pygame.Surface([10,10])
+		self.image = pygame.Surface([5,5])		#laser is just a small box
 		self.image.fill(fill_color)
 		self.rect = self.image.get_rect()
+		 
+		mx, my = pygame.mouse.get_pos()	#gets the mouse position
+
+		mag = math.sqrt((mx-playx)**(2) + (my-playy)**(2))	#normalizes the magnitude of the lasers vector
+		self.x_direction = 20*(mx-playx)/mag				#Defines the rate of x change
+		self.y_direction = 20*(my-playy)/mag				#defines the rate of y change
 
 	def tick(self):
+		#every tick, the player laser will move in the defined direcitons without change
+		self.rect = self.rect.move(self.x_direction, self.y_direction)
+		return
 
-		self.rect = self.rect.move(0, 5)
+
+class E_Laser(pygame.sprite.Sprite): #enemy spawned laser class
+	def __init__(self, xpos, ypos, gs=None):
+
+		fill_color = 255,255,0		#has it's own laser color
+		pygame.sprite.Sprite.__init__(self)
+		self.image = pygame.Surface([3,8])
+		self.image.fill(fill_color)
+		self.rect = self.image.get_rect()
+		self.rect = self.rect.move(xpos, ypos)
+
+	def tick(self):
+		#enemy lasers move downward at a rate of 15
+		self.rect = self.rect.move(0, 15)
 		return
 
 class GameSpace:
@@ -192,7 +227,7 @@ class GameSpace:
 				click1,click2,mouse = pygame.mouse.get_pressed()
 
 				if click1 and is_client == "host":
-					self.laser = P_Laser( self.player1.rect.centerx, self.player1.rect.centery,self)
+					self.laser = P1_Laser( self.player1.rect.centerx, self.player1.rect.centery,self)
 					self.laser.rect.x = self.player1.rect.centerx
 					self.laser.rect.y = self.player1.rect.centery
 					# Add the laser to the lists						
@@ -200,7 +235,7 @@ class GameSpace:
 					self.all_sprites_list.add(self.laser)
 
 				if click1 and is_client == "client":
-					self.laser = P_Laser( self.player2.rect.centerx, self.player2.rect.centery,self)
+					self.laser = P2_Laser( self.player2.rect.centerx, self.player2.rect.centery,self)
 					self.laser.rect.x = self.player2.rect.centerx
 					self.laser.rect.y = self.player2.rect.centery
 					# Add the laser to the lists
