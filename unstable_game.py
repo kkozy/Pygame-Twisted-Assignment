@@ -15,7 +15,9 @@ from twisted.internet import protocol
 from twisted.internet import task
 from twisted.internet.task import LoopingCall
 from twisted.internet.defer import DeferredQueue
-import pickle
+import cPickle as pickle
+#import pickle
+
 #data = pickle.dumps(data)
 
 connections = dict()
@@ -44,14 +46,15 @@ class Player1(pygame.sprite.Sprite):
 			self.rect = self.image.get_rect(center = (self.rect.centerx, self.rect.centery) )
 		return
 
-	def move(self, keycode):
-		if keycode == K_RIGHT and self.rect.x <= 600:
+	def move(self):
+		keys = pygame.key.get_pressed()
+		if keys[K_RIGHT] and self.rect.x <= 600:
 			self.rect = self.rect.move(2, 0)
-		if keycode == K_LEFT and self.rect.x >= 0:
+		if keys[K_LEFT] and self.rect.x >= 0:
 			self.rect = self.rect.move(-2, 0)
-		if keycode == K_UP and self.rect.y >= 360:
+		if keys[K_UP] and self.rect.y >= 360:
 			self.rect = self.rect.move(0, -2)
-		if keycode == K_DOWN and self.rect.y <= 440:
+		if keys[K_DOWN] and self.rect.y <= 440:
 			self.rect = self.rect.move(0, 2)
 		return
 
@@ -76,23 +79,23 @@ class Player2(pygame.sprite.Sprite):
 			self.rect = self.image.get_rect(center = (self.rect.centerx, self.rect.centery) )
 		return
 
-	def move(self, keycode):
-		if keycode == K_RIGHT and self.rect.x <= 600:
+	def move(self):
+		keys = pygame.key.get_pressed()
+		if keys[K_RIGHT] and self.rect.x <= 600:
 			self.rect = self.rect.move(2, 0)
-		if keycode == K_LEFT and self.rect.x >= 0:
+		if keys[K_LEFT] and self.rect.x >= 0:
 			self.rect = self.rect.move(-2, 0)
-		if keycode == K_UP and self.rect.y >= 360:
+		if keys[K_UP] and self.rect.y >= 360:
 			self.rect = self.rect.move(0, -2)
-		if keycode == K_DOWN and self.rect.y <= 440:
+		if keys[K_DOWN] and self.rect.y <= 440:
 			self.rect = self.rect.move(0, 2)
 		return
-		
+
 class Enemy(pygame.sprite.Sprite):
 	def __init__(self, gs=None):
 		pygame.sprite.Sprite.__init__(self)
 
 		foo = ['E1.png', 'E2.png', 'E3.png']
-		print(random.choice(foo)) 
 
 		self.hit_points = 10
 		self.gs = gs
@@ -105,6 +108,43 @@ class Enemy(pygame.sprite.Sprite):
 	def tick(self):
 		#do this thing
 
+		return
+
+
+class P_Laser(pygame.sprite.Sprite):
+	def __init__(self,playx,playy,gs=None):
+
+		fill_color = 0,255,0
+		pygame.sprite.Sprite.__init__(self)
+		self.image = pygame.Surface([10,10])
+		self.image.fill(fill_color)
+		self.rect = self.image.get_rect()
+		 
+		mx, my = pygame.mouse.get_pos()
+		px = playx#self.rect.centerx
+		py = playy#self.rect.centery
+
+		mag = math.sqrt((mx-px)**(2) + (my-py)**(2))
+		self.x_direction = 20*(mx-px)/mag
+		self.y_direction = 20*(my-py)/mag
+
+	def tick(self):
+
+		self.rect = self.rect.move(self.x_direction, self.y_direction)
+		return
+
+class E_Laser(pygame.sprite.Sprite):
+	def __init__(self, gs=None):
+
+		fill_color = 0,255,0
+		pygame.sprite.Sprite.__init__(self)
+		self.image = pygame.Surface([10,10])
+		self.image.fill(fill_color)
+		self.rect = self.image.get_rect()
+
+	def tick(self):
+
+		self.rect = self.rect.move(0, 5)
 		return
 
 class GameSpace:
@@ -135,11 +175,11 @@ class GameSpace:
 		#print state
 		if state != "WAIT":
 			for event in pygame.event.get():
-				if event.type == KEYDOWN and is_client == "host":
-					self.player1.move(event.key)
+				if event.type == pygame.KEYDOWN and is_client == "host":
+					self.player1.move()
 					#connections['GAME'].transport.write(str(event.key))
-				elif event.type == KEYDOWN and is_client == "client":
-					self.player2.move(event.key)
+				elif event.type == pygame.KEYDOWN and is_client == "client":
+					self.player2.move()
 					#connections['GAME'].transport.write(str(event.key))
 
 				if event.type == pygame.QUIT:
@@ -156,10 +196,15 @@ class GameSpace:
 			player_positions["p2_rect"] = self.player2.rect
 			player_positions["p2_size"] = self.player2.image.get_rect().size
 			player_positions["p2_image"] = pygame.image.tostring(self.player2.image, "RGB")
+			#player_positions["gamespace"] = self
 			connections['GAME'].transport.write((pickle.dumps(player_positions)))
 			self.screen.fill(self.black)
-			self.screen.blit(self.player1.image, self.player1.rect)
-			self.screen.blit(self.player2.image, self.player2.rect)
+			if is_client == "client":
+				self.screen.blit(self.player1.image, self.player1.rect)
+				self.screen.blit(self.player2.image, self.player2.rect)
+			elif is_client == "host":
+				self.screen.blit(self.player2.image, self.player2.rect)
+				self.screen.blit(self.player1.image, self.player1.rect)
 			pygame.display.flip()
 		else:
 			return
@@ -168,7 +213,6 @@ class Game(Protocol):
 	def __init__(self, users):
 		self.users = users
 		self.queue = DeferredQueue()
-		self.flag = True
 		
 	def connectionMade(self):
 		global state
@@ -179,9 +223,9 @@ class Game(Protocol):
 	def dataReceived(self, data):
 		#print data
 		self.queue.put(data)
-		if len(connections) >= 1 and self.flag == True:
-			self.queue.get().addCallback(self.ForwardData)
-			self.flag == False
+		#new_gamespace = pickle.loads(data)
+		#gs = new_gamespace["gamespace"]
+		self.queue.get().addCallback(self.ForwardData)
 			
 	def ForwardData(self, data):
 		positions = pickle.loads(data)
@@ -191,7 +235,8 @@ class Game(Protocol):
 		else:
 			gs.player1.rect = positions["p1_rect"]
 			gs.player1.image = pygame.image.frombuffer(positions["p1_image"], positions["p1_size"], "RGB")
-		self.queue.get().addCallback(self.ForwardData)
+		if self.queue.waiting > 0:
+				self.queue.get().addCallback(self.ForwardData)
 
 	def connectionLost(self,reason):
 		print "Connection lost - goodbye!"

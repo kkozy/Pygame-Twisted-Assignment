@@ -103,6 +103,43 @@ class Enemy(pygame.sprite.Sprite):
 
 		return
 
+
+class P_Laser(pygame.sprite.Sprite):
+	def __init__(self,playx,playy,gs=None):
+
+		fill_color = 0,255,0
+		pygame.sprite.Sprite.__init__(self)
+		self.image = pygame.Surface([10,10])
+		self.image.fill(fill_color)
+		self.rect = self.image.get_rect()
+		 
+		mx, my = pygame.mouse.get_pos()
+		px = playx#self.rect.centerx
+		py = playy#self.rect.centery
+
+		mag = math.sqrt((mx-px)**(2) + (my-py)**(2))
+		self.x_direction = 20*(mx-px)/mag
+		self.y_direction = 20*(my-py)/mag
+
+	def tick(self):
+
+		self.rect = self.rect.move(self.x_direction, self.y_direction)
+		return
+
+class E_Laser(pygame.sprite.Sprite):
+	def __init__(self, gs=None):
+
+		fill_color = 0,255,0
+		pygame.sprite.Sprite.__init__(self)
+		self.image = pygame.Surface([10,10])
+		self.image.fill(fill_color)
+		self.rect = self.image.get_rect()
+
+	def tick(self):
+
+		self.rect = self.rect.move(0, 5)
+		return
+
 class GameSpace:
 	def main(self):
 		#1) basic initialization
