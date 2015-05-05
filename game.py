@@ -95,22 +95,64 @@ class Player2(pygame.sprite.Sprite):		#basically the same as player 1
 		#	self.rect = self.rect.move(0, 2)
 		return
 
+class P1_Laser(pygame.sprite.Sprite):		#the player 1 spawned laser object
+	def __init__(self,playx,playy, mx, my, gs=None):
+
+		#client and host have different colors
+		fill_color = 0,255,0
+		pygame.sprite.Sprite.__init__(self)
+		self.image = pygame.Surface([5,5])		#laser is just a small box
+		self.image.fill(fill_color)
+		self.rect = self.image.get_rect()
+		 
+		#mx, my = pygame.mouse.get_pos()	#gets the mouse position
+
+		mag = math.sqrt((mx-playx)**(2) + (my-playy)**(2))	#normalizes the magnitude of the lasers vector
+		self.x_direction = 20*(mx-playx)/mag				#Defines the rate of x change
+		self.y_direction = 20*(my-playy)/mag				#defines the rate of y change
+
+	def tick(self):
+		#every tick, the player laser will move in the defined direcitons without change
+		self.rect = self.rect.move(self.x_direction, self.y_direction)
+		return
+
+class P2_Laser(pygame.sprite.Sprite):		#the player 2 spawned laser object
+	def __init__(self,playx,playy,mx,my,gs=None):
+
+		#client and host have different colors
+		fill_color = 255,0,0
+		pygame.sprite.Sprite.__init__(self)
+		self.image = pygame.Surface([5,5])		#laser is just a small box
+		self.image.fill(fill_color)
+		self.rect = self.image.get_rect()
+		 
+		#mx, my = pygame.mouse.get_pos()	#gets the mouse position
+
+		mag = math.sqrt((mx-playx)**(2) + (my-playy)**(2))	#normalizes the magnitude of the lasers vector
+		self.x_direction = 20*(mx-playx)/mag				#Defines the rate of x change
+		self.y_direction = 20*(my-playy)/mag				#defines the rate of y change
+
+	def tick(self):
+		#every tick, the player laser will move in the defined direcitons without change
+		self.rect = self.rect.move(self.x_direction, self.y_direction)
+		return
+
 class Enemy(pygame.sprite.Sprite):		# this is our enemy class
-	def __init__(self, gs=None):
+	def __init__(self,xpos,ypos, direction,gs=None):
 		pygame.sprite.Sprite.__init__(self)
 
 		foo = ['E1.png', 'E2.png', 'E3.png']	#enemy image option list
 
-		bar = ['LEFT','RIGHT']		#randomly chooses an initial movement direction
-		self.direction = str(random.choice(bar))
+		#bar = ['LEFT','RIGHT']		#randomly chooses an initial movement direction
+		self.direction = direction#str(random.choice(bar))
 
-		self.hit_points = 10			#each starts with it's own hitpoint tracker
+		self.hit_points = 50			#each starts with it's own hitpoint tracker
 		self.gs = gs
 		self.image = pygame.image.load(str(random.choice(foo)))	#randomly chooses it's image from 3 options
 		self.image = pygame.transform.scale(self.image,(30,30))	#standard resize
 		self.rect = self.image.get_rect()
 		self.orig_image = self.image	# keep original to limit resize errors
-		#self.rect = self.rect.move(50, 50)
+		self.rect = self.rect.move(xpos, ypos)
 
 	def tick(self):	# when we tick, we move in the direction indicated by our directon var
 
@@ -124,49 +166,6 @@ class Enemy(pygame.sprite.Sprite):		# this is our enemy class
 		elif self.direction == "RIGHT":
 			self.rect = self.rect.move(1, 0)
 		return
-
-class P1_Laser(pygame.sprite.Sprite):		#the player 1 spawned laser object
-	def __init__(self,playx,playy,gs=None):
-
-		#client and host have different colors
-		fill_color = 0,255,0
-		pygame.sprite.Sprite.__init__(self)
-		self.image = pygame.Surface([5,5])		#laser is just a small box
-		self.image.fill(fill_color)
-		self.rect = self.image.get_rect()
-		 
-		mx, my = pygame.mouse.get_pos()	#gets the mouse position
-
-		mag = math.sqrt((mx-playx)**(2) + (my-playy)**(2))	#normalizes the magnitude of the lasers vector
-		self.x_direction = 20*(mx-playx)/mag				#Defines the rate of x change
-		self.y_direction = 20*(my-playy)/mag				#defines the rate of y change
-
-	def tick(self):
-		#every tick, the player laser will move in the defined direcitons without change
-		self.rect = self.rect.move(self.x_direction, self.y_direction)
-		return
-
-class P2_Laser(pygame.sprite.Sprite):		#the player 2 spawned laser object
-	def __init__(self,playx,playy,gs=None):
-
-		#client and host have different colors
-		fill_color = 255,0,0
-		pygame.sprite.Sprite.__init__(self)
-		self.image = pygame.Surface([5,5])		#laser is just a small box
-		self.image.fill(fill_color)
-		self.rect = self.image.get_rect()
-		 
-		mx, my = pygame.mouse.get_pos()	#gets the mouse position
-
-		mag = math.sqrt((mx-playx)**(2) + (my-playy)**(2))	#normalizes the magnitude of the lasers vector
-		self.x_direction = 20*(mx-playx)/mag				#Defines the rate of x change
-		self.y_direction = 20*(my-playy)/mag				#defines the rate of y change
-
-	def tick(self):
-		#every tick, the player laser will move in the defined direcitons without change
-		self.rect = self.rect.move(self.x_direction, self.y_direction)
-		return
-
 
 class E_Laser(pygame.sprite.Sprite): #enemy spawned laser class
 	def __init__(self, xpos, ypos, gs=None):
@@ -192,6 +191,14 @@ class GameSpace:
 		self.black = 0, 0, 0
 		self.screen = pygame.display.set_mode(self.size)
 		
+		self.x = 0
+		self.y = 0
+		self.enemy_x_list = []
+		self.enemy_y_list = []
+		self.enemy_direction_list = []
+		self.num_enemy = 0
+		self.new_enemy = False
+
 		# 2) set up game objects
 		#self.clock = pygame.time.Clock()
 
@@ -207,6 +214,12 @@ class GameSpace:
 
 		self.laser_list1 = pygame.sprite.Group()	#laser lists for player 1 and player 2
 		self.laser_list2 = pygame.sprite.Group()
+
+		self.is_firing = False
+
+		self.enemy_list = pygame.sprite.Group()
+		self.foo = ['LEFT','RIGHT']
+
 	# 3) start game loop
 	def do_the_thing(self):
 
@@ -215,6 +228,21 @@ class GameSpace:
 		#5) handle user input events
 		#print state
 		if state != "WAIT":
+
+			if self.num_enemy == 0 and is_client == "host":
+				for i in range(0,1):
+					self.num_enemy +=1
+					self.x = random.randint(5,605)
+					self.y = random.randint(5,270)
+					self.direction = str(random.choice(self.foo))
+					self.enemy = Enemy(self.x,self.y,self.direction)
+					self.all_sprites_list.add(self.enemy)
+					self.enemy_list.add(self.enemy)
+					self.enemy_x_list.append(self.x)
+					self.enemy_y_list.append(self.y)
+					self.enemy_direction_list.append(self.direction)
+					self.new_enemy = True
+
 			for event in pygame.event.get():
 				if event.type == KEYDOWN:
 					if is_client == "host":
@@ -225,25 +253,29 @@ class GameSpace:
 						#connections['GAME'].transport.write(str(event.key))
 
 				click1,click2,mouse = pygame.mouse.get_pressed()
-
+				self.mx, self.my = pygame.mouse.get_pos()	#gets the mouse position
 				if click1 and is_client == "host":
-					self.laser = P1_Laser( self.player1.rect.centerx, self.player1.rect.centery,self)
+					self.laser = P1_Laser( self.player1.rect.centerx, self.player1.rect.centery,self.mx,self.my,self)
 					self.laser.rect.x = self.player1.rect.centerx
 					self.laser.rect.y = self.player1.rect.centery
 					# Add the laser to the lists						
 					self.laser_list1.add(self.laser)
 					self.all_sprites_list.add(self.laser)
+					self.is_firing = True
 
 				if click1 and is_client == "client":
-					self.laser = P2_Laser( self.player2.rect.centerx, self.player2.rect.centery,self)
+					self.laser = P2_Laser( self.player2.rect.centerx, self.player2.rect.centery,self.mx,self.my,self)
 					self.laser.rect.x = self.player2.rect.centerx
 					self.laser.rect.y = self.player2.rect.centery
 					# Add the laser to the lists
 					self.laser_list2.add(self.laser)
 					self.all_sprites_list.add(self.laser)
+					self.is_firing = True
+
 				if event.type == pygame.QUIT:
 					reactor.stop()
 					sys.exit()
+					self.is_firing = True
 
 			#6) ongoing behavior, send everything a tick
 			for item in self.laser_list1:
@@ -256,15 +288,64 @@ class GameSpace:
 				if item.rect.x > 700 or item.rect.x < -5 or item.rect.y > 500 or item.rect.y < -5:
 					self.laser_list1.remove(item)
 					self.all_sprites_list.remove(item)
+			for item in self.enemy_list:
+				item.tick()
+
 			self.player1.tick()
 			self.player2.tick()
+			
+			#Detect Sprite/enemy Collisions:
+			for enemy in self.enemy_list:	#for first list of lasers
+				for laser in self.laser_list1:
+					# See if it hit the enemy
+					self.hit_list1 = pygame.sprite.spritecollide(enemy, self.laser_list1, True)
+		
+					for hit in self.hit_list1:
+						self.laser_list1.remove(laser)
+						self.all_sprites_list.remove(laser)
+						enemy.hit_points -= 1
+						print "HP: " + str(enemy.hit_points)
+						if enemy.hit_points <= 0:
+							self.enemy_list.remove(enemy)
+							self.all_sprites_list.remove(enemy)
+							self.num_enemy -=1
+							print "E# " + str(self.num_enemy)
+			for enemy in self.enemy_list:	#for second list of lasers
+				for laser in self.laser_list2:
+					# See if it hit the enemy
+					self.hit_list2 = pygame.sprite.spritecollide(enemy, self.laser_list2, True)
+		
+					for hit in self.hit_list2:
+						self.laser_list2.remove(laser)
+						self.all_sprites_list.remove(laser)
+						enemy.hit_points -= 1
+						print "HP: " + str(enemy.hit_points)
+						if enemy.hit_points <= 0:
+							self.enemy_list.remove(enemy)
+							self.all_sprites_list.remove(enemy)
+							self.num_enemy -=1
+							print "E# " + str(self.num_enemy)
+			if self.num_enemy <= 0:
+				self.enemy_x_list = []
+				self.enemy_y_list = []
+				self.ememy_d_list = []
+				self.num_ememy = 0
 
 			#7) animations
 			player_positions["p1_rect"] = self.player1.rect
 			player_positions["p1_angle"] = self.player1.angle
 			player_positions["p2_rect"] = self.player2.rect
-			player_positions["p2_angle"] = self.player2.angle	
+			player_positions["p2_angle"] = self.player2.angle
+			player_positions["mouse_x"] = self.mx
+			player_positions["mouse_y"] = self.my
+			player_positions["firing"] = self.is_firing
+			player_positions["enemy_x"] = self.enemy_x_list
+			player_positions["enemy_y"] = self.enemy_y_list
+			player_positions["enemy_d"] = self.enemy_direction_list
+			player_positions["spawning"] = self. new_enemy
 			connections['GAME'].transport.write((pickle.dumps(player_positions)))
+			self.is_firing = False
+			self.new_enemy = False
 			#for laser in laser_list1:
 				#laser_positions["laser_rect
 			self.screen.fill(self.black)
@@ -304,9 +385,36 @@ class Game(Protocol):
 		if is_client == "host":
 			gs.player2.rect = positions["p2_rect"]
 			gs.player2.image = pygame.transform.rotate(gs.player2.orig_image, positions["p2_angle"])
+			if positions["firing"] == True:
+				mx = positions["mouse_x"]
+				my = positions["mouse_y"]
+				self.laser = P2_Laser(gs.player2.rect.centerx, gs.player2.rect.centery,mx,my,gs)
+				self.laser.rect.x = gs.player2.rect.centerx
+				self.laser.rect.y = gs.player2.rect.centery
+				# Add the laser to the lists
+				gs.laser_list2.add(self.laser)
+				gs.all_sprites_list.add(self.laser)
 		else:
 			gs.player1.rect = positions["p1_rect"]
 			gs.player1.image = pygame.transform.rotate(gs.player1.orig_image, positions["p1_angle"])
+			if positions["firing"] == True:
+				mx = positions["mouse_x"]
+				my = positions["mouse_y"]
+				self.laser = P1_Laser(gs.player1.rect.centerx, gs.player1.rect.centery,mx,my,gs)
+				self.laser.rect.x = gs.player1.rect.centerx
+				self.laser.rect.y = gs.player1.rect.centery
+				# Add the laser to the lists
+				gs.laser_list1.add(self.laser)
+				gs.all_sprites_list.add(self.laser)
+			if positions["spawning"] == True:
+				for i in range(0,len(positions["enemy_x"])):
+					self.x = positions["enemy_x"][i]
+					self.y = positions["enemy_y"][i]
+					self.d = positions["enemy_d"][i]
+					self.enemy = Enemy(int(self.x),int(self.y),self.d)
+					gs.all_sprites_list.add(self.enemy)
+					gs.enemy_list.add(self.enemy)
+				
 		if self.queue.waiting > 0:
 			self.queue.get().addCallback(self.ForwardData)
 
