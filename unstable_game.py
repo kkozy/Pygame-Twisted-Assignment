@@ -14,12 +14,14 @@ from twisted.internet import reactor
 from twisted.internet import protocol
 from twisted.internet import task
 from twisted.internet.task import LoopingCall
+from twisted.internet.defer import DeferredQueue
 import pickle
 #data = pickle.dumps(data)
 
 connections = dict()
 is_client = sys.argv[1]
 player_positions = dict()
+state = "WAIT"
 
 class Player1(pygame.sprite.Sprite):
 	def __init__(self, gs=None):
@@ -84,6 +86,7 @@ class Player2(pygame.sprite.Sprite):
 		if keycode == K_DOWN and self.rect.y <= 440:
 			self.rect = self.rect.move(0, 2)
 		return
+		
 class Enemy(pygame.sprite.Sprite):
 	def __init__(self, gs=None):
 		pygame.sprite.Sprite.__init__(self)
@@ -129,8 +132,8 @@ class GameSpace:
 		#4) regulate tick speed is done in the game class
 		
 		#5) handle user input events
-		print connections['GAME']
-		if connections['GAME'] != "NULL":
+		#print state
+		if state != "WAIT":
 			for event in pygame.event.get():
 				if event.type == KEYDOWN and is_client == "host":
 					self.player1.move(event.key)
@@ -148,10 +151,12 @@ class GameSpace:
 			self.player2.tick()
 			#7) animations
 			player_positions["p1_rect"] = self.player1.rect
-			player_positions["p1_image"] = self.player1.image
+			player_positions["p1_size"] = self.player1.image.get_rect().size
+			player_positions["p1_image"] = pygame.image.tostring(self.player1.image, "RGB")
 			player_positions["p2_rect"] = self.player2.rect
-			player_positions["p2_image"] = self.player2.image
-			connections['GAME'].sendline(pickle.dumps(player_positions))
+			player_positions["p2_size"] = self.player2.image.get_rect().size
+			player_positions["p2_image"] = pygame.image.tostring(self.player2.image, "RGB")
+			connections['GAME'].transport.write((pickle.dumps(player_positions)))
 			self.screen.fill(self.black)
 			self.screen.blit(self.player1.image, self.player1.rect)
 			self.screen.blit(self.player2.image, self.player2.rect)
@@ -162,22 +167,31 @@ class GameSpace:
 class Game(Protocol):
 	def __init__(self, users):
 		self.users = users
-		connections['GAME'] = 'NULL'
+		self.queue = DeferredQueue()
+		self.flag = True
 		
 	def connectionMade(self):
+		global state
 		connections['GAME'] = self
-		#self.state = "GO"
-		print connections['GAME']
+		state = "GO"
+		#print state
 
 	def dataReceived(self, data):
 		#print data
+		self.queue.put(data)
+		if len(connections) >= 1 and self.flag == True:
+			self.queue.get().addCallback(self.ForwardData)
+			self.flag == False
+			
+	def ForwardData(self, data):
 		positions = pickle.loads(data)
 		if is_client == "host":
 			gs.player2.rect = positions["p2_rect"]
-			gs.player2.image = positions["p2_image"]
+			gs.player2.image = pygame.image.frombuffer(positions["p2_image"], positions["p2_size"], "RGB")
 		else:
 			gs.player1.rect = positions["p1_rect"]
-			gs.player1.image = positions["p1_image"]
+			gs.player1.image = pygame.image.frombuffer(positions["p1_image"], positions["p1_size"], "RGB")
+		self.queue.get().addCallback(self.ForwardData)
 
 	def connectionLost(self,reason):
 		print "Connection lost - goodbye!"
