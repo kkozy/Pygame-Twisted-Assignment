@@ -84,13 +84,13 @@ class Player1(pygame.sprite.Sprite):		#player 1 sprite
 	def move(self,keys):		#moves based on key input
 		keys = pygame.key.get_pressed()
 		if keys[K_RIGHT] and self.rect.x <= 840:	#doesn't let user move outside of screen area
-			self.rect = self.rect.move(2, 0)
+			self.rect = self.rect.move(4, 0)
 		if keys[K_LEFT] and self.rect.x >= 5:		#each key has it's own detection case
-			self.rect = self.rect.move(-2, 0)
+			self.rect = self.rect.move(-4, 0)
 		if keys[K_UP] and self.rect.y >= 0:
-			self.rect = self.rect.move(0, -2)
+			self.rect = self.rect.move(0, -4)
 		if keys[K_DOWN] and self.rect.y <= 640:
-			self.rect = self.rect.move(0, 2)
+			self.rect = self.rect.move(0, 4)
 		return
 
 class Player2(pygame.sprite.Sprite):		#basically the same as player 1
@@ -119,13 +119,13 @@ class Player2(pygame.sprite.Sprite):		#basically the same as player 1
 	def move(self,keys):		#moves based on key input
 		keys = pygame.key.get_pressed()
 		if keys[K_RIGHT] and self.rect.x <= 840:	#doesn't let user move outside of screen area
-			self.rect = self.rect.move(2, 0)
+			self.rect = self.rect.move(4, 0)
 		if keys[K_LEFT] and self.rect.x >= 5:		#each key has it's own detection case
-			self.rect = self.rect.move(-2, 0)
+			self.rect = self.rect.move(-4, 0)
 		if keys[K_UP] and self.rect.y >= 0:
-			self.rect = self.rect.move(0, -2)
+			self.rect = self.rect.move(0, -4)
 		if keys[K_DOWN] and self.rect.y <= 640:
-			self.rect = self.rect.move(0, 2)
+			self.rect = self.rect.move(0, 4)
 		return
 
 class P1_Laser(pygame.sprite.Sprite):		#the player 1 spawned laser object
@@ -294,6 +294,8 @@ class GameSpace:
 						elif self.player2.hit_points <= 0:
 							print "PLAYER 1 WINS", self.player2.hit_points
 							self.game_over = True
+							#reset player hit points
+							#set rect to different location
 
 			if True:
 				for laser in self.laser_list2:
