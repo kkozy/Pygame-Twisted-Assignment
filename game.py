@@ -26,7 +26,7 @@ state = "WAIT"
 
 
 def buttons_pressed(buttons = dict()):
-	print 
+
 	keys = pygame.key.get_pressed()
 
 	if keys[K_RIGHT]:
@@ -54,7 +54,7 @@ def buttons_pressed(buttons = dict()):
 		buttons["click"] = True
 	else:
 		buttons["click"] = False
-	print buttons
+	#print buttons
 	return buttons
 
 class Player1(pygame.sprite.Sprite):		#player 1 sprite
@@ -67,6 +67,7 @@ class Player1(pygame.sprite.Sprite):		#player 1 sprite
 		self.orig_image = self.image	# keep original to limit resize errors
 		self.rect = self.rect.move(20, 20)
 		self.angle = 0
+		self.hit_points = 5
 
 	def tick(self):	# on tick, each player will change their image rotation 
 		if is_client == "host":
@@ -82,13 +83,13 @@ class Player1(pygame.sprite.Sprite):		#player 1 sprite
 
 	def move(self,keys):		#moves based on key input
 		keys = pygame.key.get_pressed()
-		if keys[K_RIGHT] and self.rect.x <= 580:	#doesn't let user move outside of screen area
+		if keys[K_RIGHT] and self.rect.x <= 840:	#doesn't let user move outside of screen area
 			self.rect = self.rect.move(2, 0)
 		if keys[K_LEFT] and self.rect.x >= 5:		#each key has it's own detection case
 			self.rect = self.rect.move(-2, 0)
 		if keys[K_UP] and self.rect.y >= 0:
 			self.rect = self.rect.move(0, -2)
-		if keys[K_DOWN] and self.rect.y <= 420:
+		if keys[K_DOWN] and self.rect.y <= 640:
 			self.rect = self.rect.move(0, 2)
 		return
 
@@ -100,8 +101,9 @@ class Player2(pygame.sprite.Sprite):		#basically the same as player 1
 		self.image = pygame.transform.scale(self.image,(30,50))
 		self.rect = self.image.get_rect()
 		self.orig_image = self.image	# keep original to limit resize errors
-		self.rect = self.rect.move(450, 420)
+		self.rect = self.rect.move(820, 620)
 		self.angle = 0
+		self.hit_points = 5
 
 	def tick(self):
 		if is_client == "client":
@@ -116,13 +118,13 @@ class Player2(pygame.sprite.Sprite):		#basically the same as player 1
 
 	def move(self,keys):		#moves based on key input
 		keys = pygame.key.get_pressed()
-		if keys[K_RIGHT] and self.rect.x <= 580:	#doesn't let user move outside of screen area
+		if keys[K_RIGHT] and self.rect.x <= 840:	#doesn't let user move outside of screen area
 			self.rect = self.rect.move(2, 0)
 		if keys[K_LEFT] and self.rect.x >= 5:		#each key has it's own detection case
 			self.rect = self.rect.move(-2, 0)
 		if keys[K_UP] and self.rect.y >= 0:
 			self.rect = self.rect.move(0, -2)
-		if keys[K_DOWN] and self.rect.y <= 420:
+		if keys[K_DOWN] and self.rect.y <= 640:
 			self.rect = self.rect.move(0, 2)
 		return
 
@@ -174,13 +176,18 @@ class GameSpace:
 		#1) basic initialization
 		pygame.init()
 		pygame.key.set_repeat(1,1)
-		self.size = self.width, self.height = 640, 480
+		self.size = self.width, self.height = 900, 700
 		self.black = 0, 0, 0
 		self.screen = pygame.display.set_mode(self.size)
 		
 		self.x = 0
 		self.y = 0
 		self.buttons = dict()	#keeps track of current buttons being pressed
+
+		self.p1l_count = 0
+		print "P1:" + str(self.p1l_count)
+		self.p2l_count = 0
+		print "P2:" + str(self.p2l_count)
 
 		# 2) set up game objects
 		#self.clock = pygame.time.Clock()
@@ -211,7 +218,7 @@ class GameSpace:
 
 
 			self.buttons = buttons_pressed()
-			print self.buttons
+			#print self.buttons
 
 			foobar = pygame.event.get()	#because pygame is tricky
 
@@ -236,6 +243,8 @@ class GameSpace:
 					self.laser_list1.add(self.laser)
 					self.all_sprites_list.add(self.laser)
 					self.is_firing = True
+					#self.p1l_count += 1
+					#print "P1:" + str(self.p1l_count)
 
 				if self.buttons["click"] and is_client == "client":
 					self.laser = P2_Laser( self.player2.rect.centerx, self.player2.rect.centery,self.mx,self.my,self)
@@ -245,7 +254,8 @@ class GameSpace:
 					self.laser_list2.add(self.laser)
 					self.all_sprites_list.add(self.laser)
 					self.is_firing = True
-
+					#self.p2l_count += 1
+					#print "P2:" + str(self.p2l_count)
 				#if event.type == pygame.QUIT:
 				#	reactor.stop()
 				#	sys.exit()
@@ -254,12 +264,12 @@ class GameSpace:
 			#6) ongoing behavior, send everything a tick
 			for item in self.laser_list1:
 				item.tick()
-				if item.rect.x > 700 or item.rect.x < -5 or item.rect.y > 500 or item.rect.y < -5:
+				if item.rect.x > 950 or item.rect.x < -5 or item.rect.y > 750 or item.rect.y < -5:
 					self.laser_list1.remove(item)
 					self.all_sprites_list.remove(item)
 			for item in self.laser_list2:
 				item.tick()
-				if item.rect.x > 700 or item.rect.x < -5 or item.rect.y > 500 or item.rect.y < -5:
+				if item.rect.x > 950 or item.rect.x < -5 or item.rect.y > 750 or item.rect.y < -5:
 					self.laser_list1.remove(item)
 					self.all_sprites_list.remove(item)
 
@@ -268,6 +278,39 @@ class GameSpace:
 			self.player2.tick()
 			
 ################################## COLLISION DETECTION ##########################################################
+
+			if True:
+				for laser in self.laser_list1:
+					# See if it hit the enemy
+					self.laser_hit_list = pygame.sprite.spritecollide(self.player2, self.laser_list1, True)
+
+					# For each hit, remove the laser 
+					for hit in self.laser_hit_list:
+						self.laser_list1.remove(laser)
+						self.all_sprites_list.remove(laser)
+						self.player2.hit_points -= 1
+						if self.player2.hit_points > 0:
+							print "Enemy Hit Points: ", self.player2.hit_points
+						elif self.player2.hit_points <= 0:
+							print "PLAYER 1 WINS", self.player2.hit_points
+							self.game_over = True
+
+			if True:
+				for laser in self.laser_list2:
+					# See if it hit the enemy
+					self.laser_hit_list = pygame.sprite.spritecollide(self.player1, self.laser_list2, True)
+
+					# For each hit, remove the laser 
+					for hit in self.laser_hit_list:
+						self.laser_list2.remove(laser)
+						self.all_sprites_list.remove(laser)
+						self.player1.hit_points -= 1
+						if self.player1.hit_points > 0:
+							print "Enemy Hit Points: ", self.player1.hit_points
+						elif self.player1.hit_points <= 0:
+							print "PLAYER 2 WINS", self.player1.hit_points
+							self.game_over = True
+
 
 			#7) animations
 			player_positions["p1_rect"] = self.player1.rect
@@ -325,6 +368,8 @@ class Game(Protocol):
 				# Add the laser to the lists
 				gs.laser_list2.add(self.laser)
 				gs.all_sprites_list.add(self.laser)
+				#gs.p2l_count += 1
+				#print "P2:" + str(gs.p2l_count)
 		else:
 			gs.player1.rect = positions["p1_rect"]
 			gs.player1.image = pygame.transform.rotate(gs.player1.orig_image, positions["p1_angle"])
@@ -337,6 +382,8 @@ class Game(Protocol):
 				# Add the laser to the lists
 				gs.laser_list1.add(self.laser)
 				gs.all_sprites_list.add(self.laser)
+				#gs.p1l_count += 1
+				#print "P1:" + str(gs.p1l_count)
 				
 		if self.queue.waiting > 0:
 			self.queue.get().addCallback(self.ForwardData)
