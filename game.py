@@ -371,5 +371,5 @@ if __name__ == "__main__":
 	elif sys.argv[1] == "client":
 		lc = task.LoopingCall(gs.do_the_thing)
 		lc.start(0.02)
-		reactor.connectTCP('student03.cse.nd.edu', 8000, GameFactory())
+		reactor.connectTCP('localhost', 8000, GameFactory())
 		reactor.run() 
