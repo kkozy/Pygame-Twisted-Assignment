@@ -25,6 +25,37 @@ positions = dict()
 state = "WAIT"
 
 
+def buttons_pressed(buttons = dict()):
+	print 
+	keys = pygame.key.get_pressed()
+
+	if keys[K_RIGHT]:
+		buttons["right"] = True
+	else:
+		buttons["right"] = False
+
+	if keys[K_LEFT]:
+		buttons["left"] = True
+	else:
+		buttons["left"] = False
+
+	if keys[K_UP]:
+		buttons["up"] = True
+	else:
+		buttons["up"] = False
+
+	if keys[K_DOWN]:
+		buttons["down"] = True
+	else:
+		buttons["down"] = False
+
+	click1,click2,mouse = pygame.mouse.get_pressed()
+	if click1:
+		buttons["click"] = True
+	else:
+		buttons["click"] = False
+	print buttons
+	return buttons
 
 class Player1(pygame.sprite.Sprite):		#player 1 sprite
 	def __init__(self, gs=None):
@@ -34,7 +65,7 @@ class Player1(pygame.sprite.Sprite):		#player 1 sprite
 		self.image = pygame.transform.scale(self.image,(50,30))		# resize for appropriate sprite
 		self.rect = self.image.get_rect()
 		self.orig_image = self.image	# keep original to limit resize errors
-		self.rect = self.rect.move(150, 420)
+		self.rect = self.rect.move(20, 20)
 		self.angle = 0
 
 	def tick(self):	# on tick, each player will change their image rotation 
@@ -49,16 +80,16 @@ class Player1(pygame.sprite.Sprite):		#player 1 sprite
 			#changes the angle, image, and rect so that we now face the mouse
 		return
 
-	def move(self):		#moves based on key input
+	def move(self,keys):		#moves based on key input
 		keys = pygame.key.get_pressed()
-		if keys[K_RIGHT] and self.rect.x <= 600:	#doesn't let user move outside of screen area
+		if keys[K_RIGHT] and self.rect.x <= 580:	#doesn't let user move outside of screen area
 			self.rect = self.rect.move(2, 0)
-		if keys[K_LEFT] and self.rect.x >= 0:		#each key has it's own detection case
+		if keys[K_LEFT] and self.rect.x >= 5:		#each key has it's own detection case
 			self.rect = self.rect.move(-2, 0)
-		#if keys[K_UP] and self.rect.y >= 360:
-		#	self.rect = self.rect.move(0, -2)
-		#if keys[K_DOWN] and self.rect.y <= 440:
-		#	self.rect = self.rect.move(0, 2)
+		if keys[K_UP] and self.rect.y >= 0:
+			self.rect = self.rect.move(0, -2)
+		if keys[K_DOWN] and self.rect.y <= 420:
+			self.rect = self.rect.move(0, 2)
 		return
 
 class Player2(pygame.sprite.Sprite):		#basically the same as player 1
@@ -83,16 +114,16 @@ class Player2(pygame.sprite.Sprite):		#basically the same as player 1
 			self.rect = self.image.get_rect(center = (self.rect.centerx, self.rect.centery) )
 		return
 
-	def move(self):
+	def move(self,keys):		#moves based on key input
 		keys = pygame.key.get_pressed()
-		if keys[K_RIGHT] and self.rect.x <= 600:
+		if keys[K_RIGHT] and self.rect.x <= 580:	#doesn't let user move outside of screen area
 			self.rect = self.rect.move(2, 0)
-		if keys[K_LEFT] and self.rect.x >= 0:
+		if keys[K_LEFT] and self.rect.x >= 5:		#each key has it's own detection case
 			self.rect = self.rect.move(-2, 0)
-		#if keys[K_UP] and self.rect.y >= 360:
-		#	self.rect = self.rect.move(0, -2)
-		#if keys[K_DOWN] and self.rect.y <= 440:
-		#	self.rect = self.rect.move(0, 2)
+		if keys[K_UP] and self.rect.y >= 0:
+			self.rect = self.rect.move(0, -2)
+		if keys[K_DOWN] and self.rect.y <= 420:
+			self.rect = self.rect.move(0, 2)
 		return
 
 class P1_Laser(pygame.sprite.Sprite):		#the player 1 spawned laser object
@@ -137,50 +168,6 @@ class P2_Laser(pygame.sprite.Sprite):		#the player 2 spawned laser object
 		self.rect = self.rect.move(self.x_direction, self.y_direction)
 		return
 
-class Enemy(pygame.sprite.Sprite):		# this is our enemy class
-	def __init__(self,xpos,ypos, direction,gs=None):
-		pygame.sprite.Sprite.__init__(self)
-
-		foo = ['E1.png', 'E2.png', 'E3.png']	#enemy image option list
-
-		#bar = ['LEFT','RIGHT']		#randomly chooses an initial movement direction
-		self.direction = direction#str(random.choice(bar))
-
-		self.hit_points = 50			#each starts with it's own hitpoint tracker
-		self.gs = gs
-		self.image = pygame.image.load(str(random.choice(foo)))	#randomly chooses it's image from 3 options
-		self.image = pygame.transform.scale(self.image,(30,30))	#standard resize
-		self.rect = self.image.get_rect()
-		self.orig_image = self.image	# keep original to limit resize errors
-		self.rect = self.rect.move(xpos, ypos)
-
-	def tick(self):	# when we tick, we move in the direction indicated by our directon var
-
-		if self.direction == "LEFT" and self.rect.x <= 5:	#this checks to make sure the enemy won't
-				self.direction = "RIGHT"					#run off the edge
-		elif self.direction == "RIGHT" and self.rect.x >= 570:		#if it's about to, we change our direction
-				self.direction = "LEFT"
-
-		if self.direction == "LEFT":		#the enemy moves in the direction indicated
-			self.rect = self.rect.move(-1, 0)
-		elif self.direction == "RIGHT":
-			self.rect = self.rect.move(1, 0)
-		return
-
-class E_Laser(pygame.sprite.Sprite): #enemy spawned laser class
-	def __init__(self, xpos, ypos, gs=None):
-
-		fill_color = 255,255,0		#has it's own laser color
-		pygame.sprite.Sprite.__init__(self)
-		self.image = pygame.Surface([3,8])
-		self.image.fill(fill_color)
-		self.rect = self.image.get_rect()
-		self.rect = self.rect.move(xpos, ypos)
-
-	def tick(self):
-		#enemy lasers move downward at a rate of 15
-		self.rect = self.rect.move(0, 15)
-		return
 
 class GameSpace:
 	def main(self):
@@ -193,11 +180,7 @@ class GameSpace:
 		
 		self.x = 0
 		self.y = 0
-		self.enemy_x_list = []
-		self.enemy_y_list = []
-		self.enemy_direction_list = []
-		self.num_enemy = 0
-		self.new_enemy = False
+		self.buttons = dict()	#keeps track of current buttons being pressed
 
 		# 2) set up game objects
 		#self.clock = pygame.time.Clock()
@@ -217,9 +200,6 @@ class GameSpace:
 
 		self.is_firing = False
 
-		self.enemy_list = pygame.sprite.Group()
-		self.foo = ['LEFT','RIGHT']
-
 	# 3) start game loop
 	def do_the_thing(self):
 
@@ -229,32 +209,26 @@ class GameSpace:
 		#print state
 		if state != "WAIT":
 
-			if self.num_enemy == 0 and is_client == "host":
-				for i in range(0,1):
-					self.num_enemy +=1
-					self.x = random.randint(5,605)
-					self.y = random.randint(5,270)
-					self.direction = str(random.choice(self.foo))
-					self.enemy = Enemy(self.x,self.y,self.direction)
-					self.all_sprites_list.add(self.enemy)
-					self.enemy_list.add(self.enemy)
-					self.enemy_x_list.append(self.x)
-					self.enemy_y_list.append(self.y)
-					self.enemy_direction_list.append(self.direction)
-					self.new_enemy = True
 
-			for event in pygame.event.get():
-				if event.type == KEYDOWN:
+			self.buttons = buttons_pressed()
+			print self.buttons
+
+			foobar = pygame.event.get()	#because pygame is tricky
+
+			if True:
+			#for event in pygame.event.get():
+				#if event.type == KEYDOWN or event.type == KEYUP:
+				if self.buttons["up"] or self.buttons["down"] or self.buttons["left"] or self.buttons["right"]:
 					if is_client == "host":
-						self.player1.move()
+						self.player1.move(self.buttons)
 						#connections['GAME'].transport.write(str(event.key))
 					if is_client == "client":
-						self.player2.move()
+						self.player2.move(self.buttons)
 						#connections['GAME'].transport.write(str(event.key))
 
-				click1,click2,mouse = pygame.mouse.get_pressed()
+				#lick1,click2,mouse = pygame.mouse.get_pressed()
 				self.mx, self.my = pygame.mouse.get_pos()	#gets the mouse position
-				if click1 and is_client == "host":
+				if self.buttons["click"] and is_client == "host":
 					self.laser = P1_Laser( self.player1.rect.centerx, self.player1.rect.centery,self.mx,self.my,self)
 					self.laser.rect.x = self.player1.rect.centerx
 					self.laser.rect.y = self.player1.rect.centery
@@ -263,7 +237,7 @@ class GameSpace:
 					self.all_sprites_list.add(self.laser)
 					self.is_firing = True
 
-				if click1 and is_client == "client":
+				if self.buttons["click"] and is_client == "client":
 					self.laser = P2_Laser( self.player2.rect.centerx, self.player2.rect.centery,self.mx,self.my,self)
 					self.laser.rect.x = self.player2.rect.centerx
 					self.laser.rect.y = self.player2.rect.centery
@@ -272,10 +246,10 @@ class GameSpace:
 					self.all_sprites_list.add(self.laser)
 					self.is_firing = True
 
-				if event.type == pygame.QUIT:
-					reactor.stop()
-					sys.exit()
-					self.is_firing = True
+				#if event.type == pygame.QUIT:
+				#	reactor.stop()
+				#	sys.exit()
+				#	self.is_firing = True
 
 			#6) ongoing behavior, send everything a tick
 			for item in self.laser_list1:
@@ -288,48 +262,12 @@ class GameSpace:
 				if item.rect.x > 700 or item.rect.x < -5 or item.rect.y > 500 or item.rect.y < -5:
 					self.laser_list1.remove(item)
 					self.all_sprites_list.remove(item)
-			for item in self.enemy_list:
-				item.tick()
+
 
 			self.player1.tick()
 			self.player2.tick()
 			
-			#Detect Sprite/enemy Collisions:
-			for enemy in self.enemy_list:	#for first list of lasers
-				for laser in self.laser_list1:
-					# See if it hit the enemy
-					self.hit_list1 = pygame.sprite.spritecollide(enemy, self.laser_list1, True)
-		
-					for hit in self.hit_list1:
-						self.laser_list1.remove(laser)
-						self.all_sprites_list.remove(laser)
-						enemy.hit_points -= 1
-						print "HP: " + str(enemy.hit_points)
-						if enemy.hit_points <= 0:
-							self.enemy_list.remove(enemy)
-							self.all_sprites_list.remove(enemy)
-							self.num_enemy -=1
-							print "E# " + str(self.num_enemy)
-			for enemy in self.enemy_list:	#for second list of lasers
-				for laser in self.laser_list2:
-					# See if it hit the enemy
-					self.hit_list2 = pygame.sprite.spritecollide(enemy, self.laser_list2, True)
-		
-					for hit in self.hit_list2:
-						self.laser_list2.remove(laser)
-						self.all_sprites_list.remove(laser)
-						enemy.hit_points -= 1
-						print "HP: " + str(enemy.hit_points)
-						if enemy.hit_points <= 0:
-							self.enemy_list.remove(enemy)
-							self.all_sprites_list.remove(enemy)
-							self.num_enemy -=1
-							print "E# " + str(self.num_enemy)
-			if self.num_enemy <= 0:
-				self.enemy_x_list = []
-				self.enemy_y_list = []
-				self.ememy_d_list = []
-				self.num_ememy = 0
+################################## COLLISION DETECTION ##########################################################
 
 			#7) animations
 			player_positions["p1_rect"] = self.player1.rect
@@ -339,15 +277,8 @@ class GameSpace:
 			player_positions["mouse_x"] = self.mx
 			player_positions["mouse_y"] = self.my
 			player_positions["firing"] = self.is_firing
-			player_positions["enemy_x"] = self.enemy_x_list
-			player_positions["enemy_y"] = self.enemy_y_list
-			player_positions["enemy_d"] = self.enemy_direction_list
-			player_positions["spawning"] = self. new_enemy
 			connections['GAME'].transport.write((pickle.dumps(player_positions)))
 			self.is_firing = False
-			self.new_enemy = False
-			#for laser in laser_list1:
-				#laser_positions["laser_rect
 			self.screen.fill(self.black)
 
 			for item in self.all_sprites_list:
@@ -406,14 +337,6 @@ class Game(Protocol):
 				# Add the laser to the lists
 				gs.laser_list1.add(self.laser)
 				gs.all_sprites_list.add(self.laser)
-			if positions["spawning"] == True:
-				for i in range(0,len(positions["enemy_x"])):
-					self.x = positions["enemy_x"][i]
-					self.y = positions["enemy_y"][i]
-					self.d = positions["enemy_d"][i]
-					self.enemy = Enemy(int(self.x),int(self.y),self.d)
-					gs.all_sprites_list.add(self.enemy)
-					gs.enemy_list.add(self.enemy)
 				
 		if self.queue.waiting > 0:
 			self.queue.get().addCallback(self.ForwardData)
@@ -448,5 +371,5 @@ if __name__ == "__main__":
 	elif sys.argv[1] == "client":
 		lc = task.LoopingCall(gs.do_the_thing)
 		lc.start(0.02)
-		reactor.connectTCP('localhost', 8000, GameFactory())
+		reactor.connectTCP('student03.cse.nd.edu', 8000, GameFactory())
 		reactor.run() 
